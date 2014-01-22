@@ -1,9 +1,28 @@
+# An exception that any methods in exchange may raise.
+class ExchangeException(Exception):
+
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+# An available market.
+class Market(object):
+    source_currency_id = None
+    target_currency_id = None
+    market_id = None
+    trade_minimum = 0.00000001
+
+    def __init__(self, source_currency_id, target_currency_id, market_id,
+                 trade_minimum=0.0000001):
+        self.source_currency_id = source_currency_id
+        self.target_currency_id = target_currency_id
+        self.market_id = market_id
+        self.trade_minimum = trade_minimum
+
 # A base class for Exchanges.
 class Exchange(object):
 
-    # Returns the name of the exchange.
-    def GetName(self):
-        raise NotImplementedError
+    # The name of the exchange.
+    name = ''
 
     # Returns a dict of currency_name to currency_id, e.g.
     # {
@@ -23,12 +42,7 @@ class Exchange(object):
     def GetBalances(self):
         raise NotImplementedError
 
-    # Returns a dict of (source_currency_id, target_currency_id) -> market_id, e.g.
-    # {
-    #   (12, 1): 1,
-    #   (15, 2): 2,
-    #   (2, 1) : 3,
-    # }
+    # Returns an array of Markets.
     def GetMarkets(self):
         raise NotImplementedError
 
@@ -37,9 +51,3 @@ class Exchange(object):
     # Returns an order_id.
     def CreateOrder(self, market_id, amount, bid=True, price=0):
         raise NotImplementedError
-
-# An exception that any methods in Exchange may raise.
-class ExchangeException(Exception):
-
-    def __init__(self, message):
-        Exception.__init__(self, message)

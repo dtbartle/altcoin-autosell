@@ -3,11 +3,11 @@ altcoin-autosell
 
 Script that continuously autosells altcoins for BTC. Supported exchanges:
 * CoinEx (https://gist.github.com/erundook/8377222)
+* Cryptsy (https://www.cryptsy.com/pages/api)
 
 Exchanges that could be supported:
 * BTC-e (https://btc-e.com/api/documentation)
 * BTER (http://bter.com/api)
-* Cryptsy (https://www.cryptsy.com/pages/api)
 * Vircurex (https://vircurex.com/welcome/api)
 
 Configuration file should go in ~/.altcoin-autosell.config, e.g.:
@@ -19,3 +19,7 @@ Configuration file should go in ~/.altcoin-autosell.config, e.g.:
     [CoinEx]
     api_key = abc123
     api_secret = 456def
+
+    [Cryptsy]
+    api_public_key = abc123
+    api_private_key = 456def
