@@ -76,9 +76,7 @@ class CoinEx(exchange_api.Exchange):
                  'bid' : bid,
                  'rate' : max(1, int(price * pow(10, 8)))}
         post_data = json.dumps({'order' : order})
-        order_response = self._PrivateRequest('orders', post_data)
-        if not order_response:
-            raise exchange_api.ExchangeException('Order response empty.')
-        if not 'id' in order_response[0]:
-            raise exchange_api.ExchangeException('id not in orders.')
-        return order_response[0]['id']
+        try:
+            return self._PrivateRequest('orders', post_data)[0]['id']
+        except (TypeError, KeyError, IndexError) as e:
+            raise exchange_api.ExchangeException(e)
