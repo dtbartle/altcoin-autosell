@@ -23,3 +23,5 @@ Configuration file should go in ~/.altcoin-autosell.config, e.g.:
     [Cryptsy]
     api_public_key = abc123
     api_private_key = 456def
+
+The script currently only works with Python 2.7.
