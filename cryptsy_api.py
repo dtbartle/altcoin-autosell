@@ -37,8 +37,8 @@ class Cryptsy(exchange_api.Exchange):
                    'Sign': digest}
         headers.update(self.api_headers.items())
 
-        request = urllib2.Request(self.api_auth_url, post_data, headers)
         try:
+            request = urllib2.Request(self.api_auth_url, post_data, headers)
             response = urllib2.urlopen(request)
             try:
                 response_json = json.loads(response.read())

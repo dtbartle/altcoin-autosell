@@ -23,8 +23,8 @@ class CoinEx(exchange_api.Exchange):
         if headers is None:
             headers = {}
         headers.update(self.api_headers.items())
-        request = urllib2.Request(self.api_url + method, post_data, headers)
         try:
+            request = urllib2.Request(self.api_url + method, post_data, headers)
             response = urllib2.urlopen(request)
             try:
                 response_json = json.loads(response.read())
