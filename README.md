@@ -13,8 +13,8 @@ Exchanges that could be supported:
 Configuration file should go in ~/.altcoin-autosell.config, e.g.:
 
     [General]
-    target_currency = BTC  // optional, currency to convert to
-    sleep_seconds = 60  // optional, number of seconds to sleep between polls
+    target_currency = BTC  # optional, currency to convert to
+    sleep_seconds = 60  # optional, number of seconds to sleep between polls
     
     [CoinEx]
     api_key = abc123
