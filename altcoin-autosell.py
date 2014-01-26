@@ -49,8 +49,10 @@ config.read(os.path.expanduser('~/.altcoin-autosell.config'))
 
 target_currency = (config.get('General', 'target_currency') if
                    config.has_option('General', 'target_currency') else 'BTC')
-sleep_seconds = (config.getint('General', 'sleep_seconds') if
-                 config.has_option('General', 'sleep_seconds') else 60)
+poll_delay = (config.getint('General', 'poll_delay') if
+              config.has_option('General', 'poll_delay') else 60)
+request_delay = (config.getint('General', 'request_delay') if
+                 config.has_option('General', 'request_delay') else 1)
 
 exchanges = [_LoadExchangeConfig(config, target_currency, coinex_api.CoinEx,
                                  'api_key', 'api_secret'),
@@ -77,6 +79,7 @@ while True:
             currency_name = (currencies[currency_id] if
                              currency_id in currencies else currency_id)
             try:
+                time.sleep(request_delay)
                 order_id = exchange.CreateOrder(markets[currency_id].market_id, balance, bid=False)
             except exchange_api.ExchangeException as e:
                 print ('Failed to create sell order for %s %s on %s: %s' %
@@ -84,4 +87,4 @@ while True:
             else:
                 print ('Created sell order %s for %s %s on %s.' %
                        (order_id, balance, currency_name, exchange.name))
-    time.sleep(sleep_seconds)
+    time.sleep(poll_delay)
