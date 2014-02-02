@@ -12,7 +12,7 @@ class Cryptsy(exchange_api.Exchange):
     name = 'Cryptsy'
 
     def __init__(self, api_public_key, api_private_key):
-        self.api_auth_url = 'https://www.cryptsy.com/api'
+        self.api_auth_url = 'https://api.cryptsy.com/api'
         self.api_headers = {'Content-type' : 'application/x-www-form-urlencoded',
                             'Accept' : 'application/json',
                             'User-Agent' : 'autocoin-autosell'}
