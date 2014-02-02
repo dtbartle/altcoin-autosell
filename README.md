@@ -13,8 +13,8 @@ Exchanges that could be supported:
 Configuration file should go in ~/.altcoin-autosell.config, e.g.:
 
     [General]
-    # optional, currency to convert to
-    target_currency = BTC
+    # optional, comma-separated list of currencies to convert to
+    target_currencies = BTC, LTC
     # optional, number of seconds to sleep between polls
     poll_delay = 60
     # optional, number of seconds to sleep between requests

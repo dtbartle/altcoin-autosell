@@ -54,13 +54,11 @@ class CoinEx(exchange_api.Exchange):
         return self._Request(method, headers, post_data)
 
     def GetCurrencies(self):
-        currencies = {}
         try:
-            for currency in self._Request('currencies'):
-                currencies[currency['name']] = currency['id']
+            return {currency['id'] : str(currency['name']) for
+                    currency in self._Request('currencies')}
         except (TypeError, KeyError) as e:
             raise exchange_api.ExchangeException(e)
-        return currencies
 
     def GetBalances(self):
         balances = {}

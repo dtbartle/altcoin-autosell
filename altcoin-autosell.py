@@ -13,7 +13,7 @@ import os
 import sys
 import time
 
-def _LoadExchangeConfig(config, target_currency, exchange_class, *keys):
+def _LoadExchangeConfig(config, target_currencies, exchange_class, *keys):
     if not config.has_section(exchange_class.name):
         return None
 
@@ -27,41 +27,50 @@ def _LoadExchangeConfig(config, target_currency, exchange_class, *keys):
 
     try:
         currencies = exchange.GetCurrencies()
-        if target_currency not in currencies:
-            print('%s does not list %s, disabling.' % (exchange.name, target_currency))
+        target_currency_ids = []
+        for target_currency in target_currencies:
+            currency_ids = [currency_id for currency_id, currency_name in
+                            currencies.items() if currency_name == target_currency]
+            if currency_ids:
+                target_currency_ids += currency_ids
+            else:
+                print('%s does not list %s, ignoring.' % (exchange.name, target_currency))
+        target_currency_ids = [currency_id for currency_id, currency_name in
+                               currencies.items() if currency_name in target_currencies]
+        if not target_currency_ids:
             return None
-        inverted_currencies = {currency_id : currency_name for
-                               currency_name, currency_id in currencies.items()}
     except exchange_api.ExchangeException as e:
         print('Failed to get %s currencies, disabling: %s' % (exchange.name, e))
         return None
 
     try:
-        target_currency_id = currencies[target_currency]
-        markets = {}
-        for market in exchange.GetMarkets():
-            if market.target_currency_id == target_currency_id:
-                markets[market.source_currency_id] = market
+        markets = exchange.GetMarkets()
+        target_markets = {target_currency_id : {market.source_currency_id : market for
+                                                market in markets if
+                                                market.target_currency_id == target_currency_id} for
+                          target_currency_id in target_currency_ids}
     except exchange_api.ExchangeException as e:
         print('Failed to get %s markets, disabling: %s' % (exchange_name, e))
         return None
 
     print('Monitoring %s.' % exchange.name)
-    return (exchange, target_currency_id, inverted_currencies, markets)
+    return (exchange, currencies, target_markets)
 
 config = configparser.RawConfigParser()
 config.read(os.path.expanduser('~/.altcoin-autosell.config'))
 
-target_currency = (config.get('General', 'target_currency') if
-                   config.has_option('General', 'target_currency') else 'BTC')
+target_currencies = ([target_currency.strip() for target_currency in
+                      config.get('General', 'target_currencies').split(',')] if
+                     config.has_option('General', 'target_currencies') else
+                     ['BTC', 'LTC'])
 poll_delay = (config.getint('General', 'poll_delay') if
               config.has_option('General', 'poll_delay') else 60)
 request_delay = (config.getint('General', 'request_delay') if
                  config.has_option('General', 'request_delay') else 1)
 
-exchanges = [_LoadExchangeConfig(config, target_currency, coinex_api.CoinEx,
+exchanges = [_LoadExchangeConfig(config, target_currencies, coinex_api.CoinEx,
                                  'api_key', 'api_secret'),
-             _LoadExchangeConfig(config, target_currency, cryptsy_api.Cryptsy,
+             _LoadExchangeConfig(config, target_currencies, cryptsy_api.Cryptsy,
                                  'api_private_key', 'api_public_key')]
 exchanges = [exchange for exchange in exchanges if exchange is not None]
 if not exchanges:
@@ -69,7 +78,7 @@ if not exchanges:
     sys.exit(1)
 
 while True:
-    for (exchange, target_currency_id, currencies, markets) in exchanges:
+    for (exchange, currencies, target_markets) in exchanges:
         try:
             balances = exchange.GetBalances()
         except exchange_api.ExchangeException as e:
@@ -77,19 +86,24 @@ while True:
             continue
 
         for (currency_id, balance) in balances.items():
-            if (currency_id == target_currency_id or currency_id not in markets or
-                balance < markets[currency_id].trade_minimum):
-                continue
+            for target_currency_id, markets in target_markets.items():
+                if (currency_id not in markets or
+                    balance < markets[currency_id].trade_minimum):
+                    continue
 
-            currency_name = (currencies[currency_id] if
-                             currency_id in currencies else currency_id)
-            try:
-                time.sleep(request_delay)
-                order_id = exchange.CreateOrder(markets[currency_id].market_id, balance, bid=False)
-            except exchange_api.ExchangeException as e:
-                print('Failed to create sell order for %s %s on %s: %s' %
-                      (balance, currency_name, exchange.name, e))
-            else:
-                print('Created sell order %s for %s %s on %s.' %
-                      (order_id, balance, currency_name, exchange.name))
+                currency_name = (currencies[currency_id] if
+                                 currency_id in currencies else currency_id)
+                target_currency_name = (currencies[target_currency_id] if
+                                        target_currency_id in currencies else target_currency_id)
+                try:
+                    time.sleep(request_delay)
+                    order_id = exchange.CreateOrder(markets[currency_id].market_id,
+                                                    balance, bid=False)
+                except exchange_api.ExchangeException as e:
+                    print('Failed to create sell order of %s %s for %s on %s: %s' %
+                          (balance, currency_name, target_currency_name, exchange.name, e))
+                else:
+                    print('Created sell order %s of %s %s for %s on %s.' %
+                          (order_id, balance, currency_name, target_currency_name, exchange.name))
+                    currency_id = None   # don't try other markets
     time.sleep(poll_delay)

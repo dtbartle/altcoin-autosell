@@ -24,12 +24,12 @@ class Exchange(object):
     # The name of the exchange.
     name = ''
 
-    # Returns a dict of currency_name to currency_id, e.g.
+    # Returns a dict of currency_id to currency_name, e.g.
     # {
-    #   'BTC' : 1,
-    #   'LTC' : 2,
-    #   'DOGE': 12,
-    #   '42': 15,
+    #   1: 'BTC',
+    #   2: 'LTC',
+    #   12: 'DOGE',
+    #   15: '42',
     # }
     def GetCurrencies(self):
         raise NotImplementedError
