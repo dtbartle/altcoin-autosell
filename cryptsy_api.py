@@ -1,6 +1,7 @@
 import exchange_api
 import hashlib
 import hmac
+import httplib
 import json
 import time
 import urllib
@@ -47,7 +48,7 @@ class Cryptsy(exchange_api.Exchange):
                 return response_json
             finally:
                 response.close()
-        except (urllib2.URLError, urllib2.HTTPError, ValueError) as e:
+        except (urllib2.URLError, urllib2.HTTPError, httplib.HTTPException, ValueError) as e:
             raise exchange_api.ExchangeException(e)
 
     def GetCurrencies(self):
