@@ -1,9 +1,17 @@
 import exchange_api
 import hashlib
 import hmac
-import httplib
 import json
-import urllib2
+try:
+    import http.client
+    import urllib.request
+    import urllib.error
+except ImportError:
+    # Python 2.7 compatbility
+    import httplib
+    class http: client = httplib
+    import urllib2
+    class urllib: request = urllib2; error = urllib2
 
 class CoinEx(exchange_api.Exchange):
 
@@ -15,7 +23,7 @@ class CoinEx(exchange_api.Exchange):
                             'Accept' : 'application/json',
                             'User-Agent' : 'autocoin-autosell'}
         self.api_key = api_key
-        self.api_secret = api_secret
+        self.api_secret = api_secret.encode('utf-8')
 
     def GetName(self):
         return 'CoinEx'
@@ -25,20 +33,21 @@ class CoinEx(exchange_api.Exchange):
             headers = {}
         headers.update(self.api_headers.items())
         try:
-            request = urllib2.Request(self.api_url + method, post_data, headers)
-            response = urllib2.urlopen(request)
+            request = urllib.request.Request(self.api_url + method, post_data, headers)
+            response = urllib.request.urlopen(request)
             try:
-                response_json = json.loads(response.read())
+                response_json = json.loads(response.read().decode('utf-8'))
                 if not method in response_json:
                     raise exchange_api.ExchangeException('Root not in %s.' % method)
                 return response_json[method]
             finally:
                 response.close()
-        except (urllib2.URLError, urllib2.HTTPError, httplib.HTTPException, ValueError) as e:
+        except (urllib.error.URLError, urllib.error.HTTPError, http.client.HTTPException,
+                ValueError) as e:
             raise exchange_api.ExchangeException(e)
 
     def _PrivateRequest(self, method, post_data=None):
-        hmac_data = '' if not post_data else post_data
+        hmac_data = b'' if not post_data else post_data
         digest = hmac.new(self.api_secret, hmac_data, hashlib.sha512).hexdigest()
         headers = {'API-Key' : self.api_key,
                    'API-Sign': digest}

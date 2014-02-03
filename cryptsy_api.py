@@ -1,11 +1,20 @@
 import exchange_api
 import hashlib
 import hmac
-import httplib
 import json
 import time
-import urllib
-import urllib2
+try:
+    import http.client
+    import urllib.request
+    import urllib.error
+    import urllib.parse
+except ImportError:
+    # Python 2.7 compatbility
+    import httplib
+    class http: client = httplib
+    import urllib
+    import urllib2
+    class urllib: request = urllib2; error = urllib2; parse = urllib
 
 class Cryptsy(exchange_api.Exchange):
 
@@ -17,7 +26,7 @@ class Cryptsy(exchange_api.Exchange):
                             'Accept' : 'application/json',
                             'User-Agent' : 'autocoin-autosell'}
         self.api_public_key = api_public_key
-        self.api_private_key = api_private_key
+        self.api_private_key = api_private_key.encode('utf-8')
 
     def _GetTradeMinimum(self, market):
         trade_minimums = {('Points', 'BTC') : 0.1}
@@ -32,23 +41,24 @@ class Cryptsy(exchange_api.Exchange):
             post_dict = {}
         post_dict['method'] = method
         post_dict['nonce'] = int(time.time())
-        post_data = urllib.urlencode(post_dict)
+        post_data = urllib.parse.urlencode(post_dict).encode('utf-8')
         digest = hmac.new(self.api_private_key, post_data, hashlib.sha512).hexdigest()
         headers = {'Key' : self.api_public_key,
                    'Sign': digest}
         headers.update(self.api_headers.items())
 
         try:
-            request = urllib2.Request(self.api_auth_url, post_data, headers)
-            response = urllib2.urlopen(request)
+            request = urllib.request.Request(self.api_auth_url, post_data, headers)
+            response = urllib.request.urlopen(request)
             try:
-                response_json = json.loads(response.read())
+                response_json = json.loads(response.read().decode('utf-8'))
                 if 'error' in response_json and response_json['error']:
                     raise exchange_api.ExchangeException(response_json['error'])
                 return response_json
             finally:
                 response.close()
-        except (urllib2.URLError, urllib2.HTTPError, httplib.HTTPException, ValueError) as e:
+        except (urllib.error.URLError, urllib.error.HTTPError, http.client.HTTPException,
+                ValueError) as e:
             raise exchange_api.ExchangeException(e)
 
     def GetCurrencies(self):

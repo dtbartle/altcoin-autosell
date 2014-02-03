@@ -1,7 +1,12 @@
 #!/usr/bin/python
 
 import coinex_api
-import ConfigParser
+try:
+    import configparser
+except ImportError:
+    # Python 2.7 compatbility
+    import ConfigParser
+    configparser = ConfigParser
 import cryptsy_api
 import exchange_api
 import os
@@ -23,12 +28,12 @@ def _LoadExchangeConfig(config, target_currency, exchange_class, *keys):
     try:
         currencies = exchange.GetCurrencies()
         if target_currency not in currencies:
-            print '%s does not list %s, disabling.' % (exchange.name, target_currency)
+            print('%s does not list %s, disabling.' % (exchange.name, target_currency))
             return None
         inverted_currencies = {currency_id : currency_name for
                                currency_name, currency_id in currencies.items()}
     except exchange_api.ExchangeException as e:
-        print 'Failed to get %s currencies, disabling: %s' % (exchange.name, e)
+        print('Failed to get %s currencies, disabling: %s' % (exchange.name, e))
         return None
 
     try:
@@ -38,13 +43,13 @@ def _LoadExchangeConfig(config, target_currency, exchange_class, *keys):
             if market.target_currency_id == target_currency_id:
                 markets[market.source_currency_id] = market
     except exchange_api.ExchangeException as e:
-        print 'Failed to get %s markets, disabling: %s' % (exchange_name, e)
+        print('Failed to get %s markets, disabling: %s' % (exchange_name, e))
         return None
 
-    print 'Monitoring %s.' % exchange.name
+    print('Monitoring %s.' % exchange.name)
     return (exchange, target_currency_id, inverted_currencies, markets)
 
-config = ConfigParser.RawConfigParser()
+config = configparser.RawConfigParser()
 config.read(os.path.expanduser('~/.altcoin-autosell.config'))
 
 target_currency = (config.get('General', 'target_currency') if
@@ -60,7 +65,7 @@ exchanges = [_LoadExchangeConfig(config, target_currency, coinex_api.CoinEx,
                                  'api_private_key', 'api_public_key')]
 exchanges = [exchange for exchange in exchanges if exchange is not None]
 if not exchanges:
-    print 'No exchange sections defined!'
+    print('No exchange sections defined!')
     sys.exit(1)
 
 while True:
@@ -68,7 +73,7 @@ while True:
         try:
             balances = exchange.GetBalances()
         except exchange_api.ExchangeException as e:
-            print 'Failed to get %s balances: %s' % (exchange.name, e)
+            print('Failed to get %s balances: %s' % (exchange.name, e))
             continue
 
         for (currency_id, balance) in balances.items():
@@ -82,9 +87,9 @@ while True:
                 time.sleep(request_delay)
                 order_id = exchange.CreateOrder(markets[currency_id].market_id, balance, bid=False)
             except exchange_api.ExchangeException as e:
-                print ('Failed to create sell order for %s %s on %s: %s' %
-                       (balance, currency_name, exchange.name, e))
+                print('Failed to create sell order for %s %s on %s: %s' %
+                      (balance, currency_name, exchange.name, e))
             else:
-                print ('Created sell order %s for %s %s on %s.' %
-                       (order_id, balance, currency_name, exchange.name))
+                print('Created sell order %s for %s %s on %s.' %
+                      (order_id, balance, currency_name, exchange.name))
     time.sleep(poll_delay)
