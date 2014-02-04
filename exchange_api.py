@@ -1,7 +1,8 @@
 # An exception that any methods in exchange may raise.
 class ExchangeException(Exception):
 
-    def __init__(self, message):
+    def __init__(self, exception):
+        message = '[%s] %s' % (type(exception).__name__, exception)
         Exception.__init__(self, message)
 
 # An available market.
