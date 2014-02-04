@@ -83,7 +83,7 @@ class CoinEx(exchange_api.Exchange):
                  'amount' : int(amount * pow(10, 8)),
                  'bid' : bid,
                  'rate' : max(1, int(price * pow(10, 8)))}
-        post_data = json.dumps({'order' : order})
+        post_data = json.dumps({'order' : order}).encode('utf-8')
         try:
             return self._PrivateRequest('orders', post_data)[0]['id']
         except (TypeError, KeyError, IndexError) as e:
