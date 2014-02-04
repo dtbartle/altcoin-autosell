@@ -35,8 +35,6 @@ def _LoadExchangeConfig(config, target_currencies, exchange_class, *keys):
                 target_currency_ids += currency_ids
             else:
                 print('%s does not list %s, ignoring.' % (exchange.name, target_currency))
-        target_currency_ids = [currency_id for currency_id, currency_name in
-                               currencies.items() if currency_name in target_currencies]
         if not target_currency_ids:
             return None
     except exchange_api.ExchangeException as e:
@@ -45,10 +43,10 @@ def _LoadExchangeConfig(config, target_currencies, exchange_class, *keys):
 
     try:
         markets = exchange.GetMarkets()
-        target_markets = {target_currency_id : {market.source_currency_id : market for
+        target_markets = [(target_currency_id, {market.source_currency_id : market for
                                                 market in markets if
-                                                market.target_currency_id == target_currency_id} for
-                          target_currency_id in target_currency_ids}
+                                                market.target_currency_id == target_currency_id}) for
+                          target_currency_id in target_currency_ids]
     except exchange_api.ExchangeException as e:
         print('Failed to get %s markets, disabling: %s' % (exchange_name, e))
         return None
@@ -86,9 +84,11 @@ while True:
             continue
 
         for (currency_id, balance) in balances.items():
-            for target_currency_id, markets in target_markets.items():
-                if (currency_id not in markets or
-                    balance < markets[currency_id].trade_minimum):
+            for target_currency_id, markets in target_markets:
+                if currency_id not in markets:
+                    continue
+                elif balance < markets[currency_id].trade_minimum:
+                    currency_id = None  # don't try other markets
                     continue
 
                 currency_name = (currencies[currency_id] if
@@ -105,5 +105,6 @@ while True:
                 else:
                     print('Created sell order %s of %s %s for %s on %s.' %
                           (order_id, balance, currency_name, target_currency_name, exchange.name))
-                    currency_id = None   # don't try other markets
+                finally:
+                    currency_id = None  # don't try other markets
     time.sleep(poll_delay)
