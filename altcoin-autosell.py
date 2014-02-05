@@ -70,6 +70,7 @@ target_currencies = ([target_currency.strip() for target_currency in
                       config.get('General', 'target_currencies').split(',')] if
                      config.has_option('General', 'target_currencies') else
                      ['BTC', 'LTC'])
+print('Selling to %s.' % target_currencies)
 poll_delay = (config.getint('General', 'poll_delay') if
               config.has_option('General', 'poll_delay') else 60)
 request_delay = (config.getint('General', 'request_delay') if
