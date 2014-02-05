@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import argparse
 import coinex_api
 try:
     import configparser
@@ -54,8 +55,14 @@ def _LoadExchangeConfig(config, target_currencies, exchange_class, *keys):
     print('Monitoring %s.' % exchange.name)
     return (exchange, currencies, target_markets)
 
+
+parser = argparse.ArgumentParser(description='Script to auto-sell altcoins.')
+parser.add_argument('-c', '--config', dest='config_path', default='~/.altcoin-autosell.config',
+                    help='path to the configuration file')
+args = parser.parse_args()
+
 config = configparser.RawConfigParser()
-config.read(os.path.expanduser('~/.altcoin-autosell.config'))
+config.read(os.path.expanduser(args.config_path))
 
 target_currencies = ([target_currency.strip() for target_currency in
                       config.get('General', 'target_currencies').split(',')] if
