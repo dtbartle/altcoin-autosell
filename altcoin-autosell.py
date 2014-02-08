@@ -14,6 +14,9 @@ import os
 import sys
 import time
 
+def _Log(message, *args):
+    print('%s: %s' % (time.strftime('%c'), message % args))
+
 def _LoadExchangeConfig(config, target_currencies, exchange_class, *keys):
     if not config.has_section(exchange_class.name):
         return None
@@ -35,11 +38,11 @@ def _LoadExchangeConfig(config, target_currencies, exchange_class, *keys):
             if currency_ids:
                 target_currency_ids += currency_ids
             else:
-                print('%s does not list %s, ignoring.' % (exchange.name, target_currency))
+                _Log('%s does not list %s, ignoring.', exchange.name, target_currency)
         if not target_currency_ids:
             return None
     except exchange_api.ExchangeException as e:
-        print('Failed to get %s currencies, disabling: %s' % (exchange.name, e))
+        _Log('Failed to get %s currencies, disabling: %s', exchange.name, e)
         return None
 
     try:
@@ -49,10 +52,10 @@ def _LoadExchangeConfig(config, target_currencies, exchange_class, *keys):
                                                 market.target_currency_id == target_currency_id}) for
                           target_currency_id in target_currency_ids]
     except exchange_api.ExchangeException as e:
-        print('Failed to get %s markets, disabling: %s' % (exchange_name, e))
+        _Log('Failed to get %s markets, disabling: %s', exchange_name, e)
         return None
 
-    print('Monitoring %s.' % exchange.name)
+    _Log('Monitoring %s.', exchange.name)
     return (exchange, currencies, target_markets)
 
 
@@ -63,14 +66,14 @@ args = parser.parse_args()
 
 config = configparser.RawConfigParser()
 config_path = os.path.expanduser(args.config_path)
-print('Using config from "%s".' % config_path)
+_Log('Using config from "%s".', config_path)
 config.read(config_path)
 
 target_currencies = ([target_currency.strip() for target_currency in
                       config.get('General', 'target_currencies').split(',')] if
                      config.has_option('General', 'target_currencies') else
                      ['BTC', 'LTC'])
-print('Selling to %s.' % target_currencies)
+_Log('Selling to %s.', target_currencies)
 poll_delay = (config.getint('General', 'poll_delay') if
               config.has_option('General', 'poll_delay') else 60)
 request_delay = (config.getint('General', 'request_delay') if
@@ -82,7 +85,7 @@ exchanges = [_LoadExchangeConfig(config, target_currencies, coinex_api.CoinEx,
                                  'api_private_key', 'api_public_key')]
 exchanges = [exchange for exchange in exchanges if exchange is not None]
 if not exchanges:
-    print('No exchange sections defined!')
+    _Log('No exchange sections defined!')
     sys.exit(1)
 
 while True:
@@ -90,7 +93,7 @@ while True:
         try:
             balances = exchange.GetBalances()
         except exchange_api.ExchangeException as e:
-            print('Failed to get %s balances: %s' % (exchange.name, e))
+            _Log('Failed to get %s balances: %s', exchange.name, e)
             continue
 
         for (currency_id, balance) in balances.items():
@@ -110,11 +113,11 @@ while True:
                     order_id = exchange.CreateOrder(markets[currency_id].market_id,
                                                     balance, bid=False)
                 except exchange_api.ExchangeException as e:
-                    print('Failed to create sell order of %s %s for %s on %s: %s' %
-                          (balance, currency_name, target_currency_name, exchange.name, e))
+                    _Log('Failed to create sell order of %s %s for %s on %s: %s',
+                         balance, currency_name, target_currency_name, exchange.name, e)
                 else:
-                    print('Created sell order %s of %s %s for %s on %s.' %
-                          (order_id, balance, currency_name, target_currency_name, exchange.name))
+                    _Log('Created sell order %s of %s %s for %s on %s.',
+                         order_id, balance, currency_name, target_currency_name, exchange.name)
                 finally:
                     currency_id = None  # don't try other markets
     time.sleep(poll_delay)
