@@ -14,11 +14,13 @@ Configuration file should go in ~/.altcoin-autosell.config, e.g.:
 
     [General]
     # optional, comma-separated list of currencies to convert to
-    target_currencies = BTC, LTC
+    #target_currencies = BTC, LTC
+    # optional, comma-separated list of currencies to convert from
+    #source_currencies = DOGE
     # optional, number of seconds to sleep between polls
-    poll_delay = 60
+    #poll_delay = 60
     # optional, number of seconds to sleep between requests
-    request_delay = 1
+    #request_delay = 1
     
     [CoinEx]
     api_key = abc123
@@ -27,5 +29,3 @@ Configuration file should go in ~/.altcoin-autosell.config, e.g.:
     [Cryptsy]
     api_public_key = abc123
     api_private_key = 456def
-
-The script currently only works with Python 2.7.

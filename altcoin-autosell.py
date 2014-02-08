@@ -17,7 +17,18 @@ import time
 def _Log(message, *args):
     print('%s: %s' % (time.strftime('%c'), message % args))
 
-def _LoadExchangeConfig(config, target_currencies, exchange_class, *keys):
+def _MapCurrencies(exchange_name, currencies_map, currencies):
+    currency_ids = []
+    for currency in currencies:
+        currency_ids = [currency_id for currency_id, currency_name in
+                        currencies_map.items() if currency_name == currency]
+        if currency_ids:
+            currency_ids += currency_ids
+        else:
+            _Log('%s does not list %s, ignoring.', exchange_name, currency)
+    return currency_ids
+
+def _LoadExchangeConfig(config, target_currencies, source_currencies, exchange_class, *keys):
     if not config.has_section(exchange_class.name):
         return None
 
@@ -31,15 +42,13 @@ def _LoadExchangeConfig(config, target_currencies, exchange_class, *keys):
 
     try:
         currencies = exchange.GetCurrencies()
-        target_currency_ids = []
-        for target_currency in target_currencies:
-            currency_ids = [currency_id for currency_id, currency_name in
-                            currencies.items() if currency_name == target_currency]
-            if currency_ids:
-                target_currency_ids += currency_ids
-            else:
-                _Log('%s does not list %s, ignoring.', exchange.name, target_currency)
+        target_currency_ids = _MapCurrencies(exchange.name, currencies, target_currencies)
         if not target_currency_ids:
+            _Log('%s does not list any target_currencies, disabling.', exchange.name)
+            return None
+        source_currency_ids = _MapCurrencies(exchange.name, currencies, source_currencies)
+        if source_currencies and not source_currency_ids:
+            _Log('%s does not list any source_currencies, disabling.', exchange.name)
             return None
     except exchange_api.ExchangeException as e:
         _Log('Failed to get %s currencies, disabling: %s', exchange.name, e)
@@ -56,7 +65,7 @@ def _LoadExchangeConfig(config, target_currencies, exchange_class, *keys):
         return None
 
     _Log('Monitoring %s.', exchange.name)
-    return (exchange, currencies, target_markets)
+    return (exchange, currencies, target_markets, source_currency_ids)
 
 
 parser = argparse.ArgumentParser(description='Script to auto-sell altcoins.')
@@ -71,25 +80,29 @@ config.read(config_path)
 
 target_currencies = ([target_currency.strip() for target_currency in
                       config.get('General', 'target_currencies').split(',')] if
-                     config.has_option('General', 'target_currencies') else
-                     ['BTC', 'LTC'])
+                     config.has_option('General', 'target_currencies') else ['BTC', 'LTC'])
 _Log('Selling to %s.', target_currencies)
+source_currencies = ([source_currency.strip() for source_currency in
+                      config.get('General', 'source_currencies').split(',')] if
+                     config.has_option('General', 'source_currencies') else [])
+if source_currencies:
+    _Log('Selling from %s.', source_currencies)
 poll_delay = (config.getint('General', 'poll_delay') if
               config.has_option('General', 'poll_delay') else 60)
 request_delay = (config.getint('General', 'request_delay') if
                  config.has_option('General', 'request_delay') else 1)
 
-exchanges = [_LoadExchangeConfig(config, target_currencies, coinex_api.CoinEx,
-                                 'api_key', 'api_secret'),
-             _LoadExchangeConfig(config, target_currencies, cryptsy_api.Cryptsy,
-                                 'api_private_key', 'api_public_key')]
+exchanges = [_LoadExchangeConfig(config, target_currencies, source_currencies,
+                                 coinex_api.CoinEx, 'api_key', 'api_secret'),
+             _LoadExchangeConfig(config, target_currencies, source_currencies,
+                                 cryptsy_api.Cryptsy, 'api_private_key', 'api_public_key')]
 exchanges = [exchange for exchange in exchanges if exchange is not None]
 if not exchanges:
     _Log('No exchange sections defined!')
     sys.exit(1)
 
 while True:
-    for (exchange, currencies, target_markets) in exchanges:
+    for (exchange, currencies, target_markets, source_currency_ids) in exchanges:
         try:
             balances = exchange.GetBalances()
         except exchange_api.ExchangeException as e:
@@ -98,7 +111,8 @@ while True:
 
         for (currency_id, balance) in balances.items():
             for target_currency_id, markets in target_markets:
-                if currency_id not in markets:
+                if (currency_id not in markets or
+                    (source_currency_ids and currency_id not in source_currencies)):
                     continue
                 elif balance < markets[currency_id].trade_minimum:
                     currency_id = None  # don't try other markets
