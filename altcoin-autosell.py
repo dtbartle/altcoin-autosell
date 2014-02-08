@@ -18,15 +18,15 @@ def _Log(message, *args):
     print('%s: %s' % (time.strftime('%c'), message % args))
 
 def _MapCurrencies(exchange_name, currencies_map, currencies):
-    currency_ids = []
+    out_currency_ids = []
     for currency in currencies:
         currency_ids = [currency_id for currency_id, currency_name in
                         currencies_map.items() if currency_name == currency]
         if currency_ids:
-            currency_ids += currency_ids
+            out_currency_ids += currency_ids
         else:
             _Log('%s does not list %s, ignoring.', exchange_name, currency)
-    return currency_ids
+    return out_currency_ids
 
 def _LoadExchangeConfig(config, target_currencies, source_currencies, exchange_class, *keys):
     if not config.has_section(exchange_class.name):
