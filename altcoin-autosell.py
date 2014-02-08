@@ -74,9 +74,14 @@ parser.add_argument('-c', '--config', dest='config_path', default='~/.altcoin-au
 args = parser.parse_args()
 
 config = configparser.RawConfigParser()
-config_path = os.path.expanduser(args.config_path)
-_Log('Using config from "%s".', config_path)
-config.read(config_path)
+try:
+    config_path = os.path.expanduser(args.config_path)
+    _Log('Using config from "%s".', config_path)
+    with open(config_path) as config_file:
+        config.readfp(config_file)
+except IOError as e:
+    _Log('Failed to read config: %s', e)
+    sys.exit(1)
 
 target_currencies = ([target_currency.strip() for target_currency in
                       config.get('General', 'target_currencies').split(',')] if
