@@ -16,7 +16,7 @@ Configuration file should go in ~/.altcoin-autosell.config, e.g.:
     # optional, comma-separated list of currencies to convert to
     #target_currencies = BTC, LTC
     # optional, comma-separated list of currencies to convert from
-    #source_currencies = DOGE
+    #source_currencies = DOGE, TAG, DGC
     # optional, number of seconds to sleep between polls
     #poll_delay = 60
     # optional, number of seconds to sleep between requests
