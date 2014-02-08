@@ -28,7 +28,7 @@ class CoinEx(exchange_api.Exchange):
     def GetName(self):
         return 'CoinEx'
 
-    def _Request(self, method, headers=None, post_data=None):
+    def _Request(self, method, headers=None, post_data=None, json_root=None):
         if headers is None:
             headers = {}
         headers.update(self.api_headers.items())
@@ -37,21 +37,24 @@ class CoinEx(exchange_api.Exchange):
             response = urllib.request.urlopen(request)
             try:
                 response_json = json.loads(response.read().decode('utf-8'))
-                if not method in response_json:
-                    raise exchange_api.ExchangeException('Root not in %s.' % method)
-                return response_json[method]
+                if not json_root:
+                    json_root = method
+                if not json_root in response_json:
+                    raise exchange_api.ExchangeException('JSON root "%s" not in "%s".' %
+                                                         (json_root, method))
+                return response_json[json_root]
             finally:
                 response.close()
         except (urllib.error.URLError, urllib.error.HTTPError, http.client.HTTPException,
                 ValueError) as e:
             raise exchange_api.ExchangeException(e)
 
-    def _PrivateRequest(self, method, post_data=None):
+    def _PrivateRequest(self, method, post_data=None, json_root=None):
         hmac_data = b'' if not post_data else post_data
         digest = hmac.new(self.api_secret, hmac_data, hashlib.sha512).hexdigest()
         headers = {'API-Key' : self.api_key,
                    'API-Sign': digest}
-        return self._Request(method, headers, post_data)
+        return self._Request(method, headers, post_data, json_root)
 
     def GetCurrencies(self):
         try:
@@ -85,6 +88,6 @@ class CoinEx(exchange_api.Exchange):
                  'rate' : max(1, int(price * pow(10, 8)))}
         post_data = json.dumps({'order' : order}).encode('utf-8')
         try:
-            return self._PrivateRequest('orders', post_data)[0]['id']
+            return self._PrivateRequest('orders', post_data, 'order')['id']
         except (TypeError, KeyError, IndexError) as e:
             raise exchange_api.ExchangeException(e)
