@@ -24,7 +24,8 @@ def _LoadExchangeConfig(config, target_currencies, source_currencies, exchange_c
     args = {}
     for key in keys:
         if not config.has_option(exchange_class.GetName(), key):
-            raise ValueError('Missing %s.%s.' % (exchange_class.GetName(), key))
+            _Log('Missing %s.%s.', exchange_class.GetName(), key)
+            return None
         args[key] = config.get(exchange_class.GetName(), key)
 
     exchange = exchange_class(**args)
