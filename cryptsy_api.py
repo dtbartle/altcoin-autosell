@@ -21,7 +21,7 @@ class Market(exchange_api.Market):
     _TRADE_MINIMUMS = {('Points', 'BTC') : 0.1}
 
     def __init__(self, exchange, source_currency, target_currency, market_id, reverse_market):
-        self._exchange = exchange
+        exchange_api.Market.__init__(self, exchange)
         self._source_currency = source_currency
         self._target_currency = target_currency
         self._market_id = market_id
@@ -51,20 +51,16 @@ class Market(exchange_api.Market):
         except (TypeError, KeyError, IndexError) as e:
             raise exchange_api.ExchangeException(e)
 
-    def CreateOrder(self, amount, bid=True, price=None):
+    def CreateOrder(self, bid_order, amount, price):
         if self._reverse_market:
-            bid = not bid
-        if price is None:
-            if not bid:
-                raise exchange_api.ExchangeException('Market sell orders are not supported.')
-            price = 0
+            bid_order = not bid_order
         post_dict = {'marketid' : self._market_id,
-                     'ordertype' : 'Buy' if bid else 'Sell',
+                     'ordertype' : 'Buy' if bid_order else 'Sell',
                      'quantity' : amount,
                      'price' : max(0.0000001, price)}
         try:
             order_id = self._exchange._Request('createorder', post_dict)['orderid']
-            return exchange_api.Order(self, order_id, bid, amount, price)
+            return exchange_api.Order(self, order_id, bid_order, amount, price)
         except (TypeError, KeyError) as e:
             raise exchange_api.ExchangeException(e)
 

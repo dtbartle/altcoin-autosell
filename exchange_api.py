@@ -31,6 +31,12 @@ class Order(object):
 
 # An available market.
 class Market(object):
+    def __init__(self, exchange):
+        self._exchange = exchange
+
+    def GetExchange(self):
+        return self._exchange
+
     # Returns the currency that will be sold.
     def GetSourceCurrency(self):
         raise NotImplementedError
@@ -47,10 +53,10 @@ class Market(object):
     def GetPublicOrders(self):
         raise NotImplementedError
 
-    # Creates an order (market order if price is None).
-    # If 'bid' is True, this is a bid/buy order, otherwise an ask/sell order.
+    # Creates an order.
+    # If 'bid_order' is True, this is a bid/buy order, otherwise an ask/sell order.
     # Returns an Order.
-    def CreateOrder(self, amount, bid=True, price=None):
+    def CreateOrder(self, bid_order, amount, price):
         raise NotImplementedError
 
 # A base class for Exchanges.

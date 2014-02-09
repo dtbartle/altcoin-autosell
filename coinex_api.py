@@ -19,7 +19,7 @@ except ImportError:
 class Market(exchange_api.Market):
     def __init__(self, exchange, source_currency_id, target_currency_id, trade_pair_id,
                  reverse_market):
-        self._exchange = exchange
+        exchange_api.Market.__init__(self, exchange)
         self._source_currency_id = source_currency_id
         self._source_currency = exchange._GetCurrencyName(source_currency_id)
         self._target_currency_id = target_currency_id
@@ -51,21 +51,17 @@ class Market(exchange_api.Market):
         except (TypeError, KeyError, IndexError) as e:
             raise exchange_api.ExchangeException(e)
 
-    def CreateOrder(self, amount, bid=True, price=None):
+    def CreateOrder(self, bid_order, amount, price):
         if self._reverse_market:
-            bid = not bid
-        if price is None:
-            if not bid:
-                raise exchange_api.ExchangeException('Market sell orders are not supported.')
-            price = 0
+            bid_order = not bid_order
         order = {'trade_pair_id' : self._trade_pair_id,
                  'amount' : int(amount * pow(10, 8)),
-                 'bid' : bid,
+                 'bid' : bid_order,
                  'rate' : max(1, int(price * pow(10, 8)))}
         post_data = json.dumps({'order' : order}).encode('utf-8')
         try:
             order_id = self._exchange._PrivateRequest('orders', post_data, 'order')['id']
-            return exchange_api.Order(self, order_id, bid, amount, price)
+            return exchange_api.Order(self, order_id, bid_order, amount, price)
         except (TypeError, KeyError, IndexError) as e:
             raise exchange_api.ExchangeException(e)
 
@@ -92,7 +88,7 @@ class CoinEx(exchange_api.Exchange):
                 self._markets[market1.GetSourceCurrency()][market1.GetTargetCurrency()] = market1
                 market2 = Market(self, trade_pair['market_id'], trade_pair['currency_id'],
                                  trade_pair['id'], True)
-                self._markets[market2.GetTargetCurrency()][market2.GetSourceCurrency()] = market2
+                self._markets[market2.GetSourceCurrency()][market2.GetTargetCurrency()] = market2
         except (TypeError, KeyError) as e:
             raise exchange_api.ExchangeException(e)
 

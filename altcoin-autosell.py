@@ -108,14 +108,21 @@ while True:
                     continue
 
                 try:
-                    time.sleep(request_delay)
-                    order = market.CreateOrder(balance, bid=False)
+                    sell_price = max([order.GetPrice() for order in market.GetPublicOrders()[0]])
                 except exchange_api.ExchangeException as e:
-                    _Log('Failed to create sell order of %s %s for %s on %s: %s',
-                         balance, currency, target_currency, exchange.GetName(), e)
-                else:
-                    _Log('Created sell order %s of %s %s for %s on %s.',
-                         order.GetOrderId(), balance, currency, target_currency, exchange.GetName())
+                    _Log('Failed to get public orders for %s/%s on %s.',
+                         currency, target_currency, exchange.GetName(), e)
+                    continue
+
+                try:
+                    time.sleep(request_delay)
+                    order = market.CreateOrder(False, balance, sell_price)
+                    _Log('Created sell order %s of %s %s for %s at %s on %s.',
+                         order.GetOrderId(), balance, currency, sell_price, target_currency,
+                         exchange.GetName())
+                except exchange_api.ExchangeException as e:
+                    _Log('Failed to create sell order of %s %s at %s for %s on %s: %s',
+                         balance, currency, sell_price, target_currency, exchange.GetName(), e)
                 finally:
                     currency = None  # don't try other markets
 
