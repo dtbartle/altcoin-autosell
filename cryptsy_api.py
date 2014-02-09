@@ -36,6 +36,21 @@ class Market(exchange_api.Market):
     def GetTradeMinimum(self):
         return self._TRADE_MINIMUMS.get((self._source_currency, self._target_currency), 0.0000001)
 
+    def GetPublicOrders(self):
+        try:
+            post_dict = {'marketid' : self._market_id}
+            orders = self._exchange._Request('marketorders', post_dict)['return']
+            return ([exchange_api.Order(self, 'N/A', True,
+                                        float(order['quantity']),
+                                        float(order['buyprice'])) for
+                     order in orders.get('buyorders', [])],
+                    [exchange_api.Order(self, 'N/A', False,
+                                        float(order['quantity']),
+                                        float(order['sellprice'])) for
+                     order in orders.get('sellorders', [])])
+        except (TypeError, KeyError, IndexError) as e:
+            raise exchange_api.ExchangeException(e)
+
     def CreateOrder(self, amount, bid=True, price=None):
         if self._reverse_market:
             bid = not bid
@@ -48,7 +63,8 @@ class Market(exchange_api.Market):
                      'quantity' : amount,
                      'price' : max(0.0000001, price)}
         try:
-            return self._exchange._Request('createorder', post_dict)['orderid']
+            order_id = self._exchange._Request('createorder', post_dict)['orderid']
+            return exchange_api.Order(self, order_id, bid, amount, price)
         except (TypeError, KeyError) as e:
             raise exchange_api.ExchangeException(e)
 

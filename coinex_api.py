@@ -7,12 +7,14 @@ try:
     import http.client
     import urllib.request
     import urllib.error
+    import urllib.parse
 except ImportError:
     # Python 2.7 compatbility
     import httplib
     class http: client = httplib
+    import urllib
     import urllib2
-    class urllib: request = urllib2; error = urllib2
+    class urllib: request = urllib2; error = urllib2; parse = urllib
 
 class Market(exchange_api.Market):
     def __init__(self, exchange, source_currency_id, target_currency_id, trade_pair_id,
@@ -34,7 +36,22 @@ class Market(exchange_api.Market):
     def GetTradeMinimum(self):
         return 0.0000001
 
-    def CreateOrder(self, trade_pair_id, amount, bid=True, price=None):
+    def GetPublicOrders(self):
+        try:
+            request_vars = {'tradePair' : self._trade_pair_id}
+            orders = self._exchange._Request('orders', request_vars=request_vars)
+            return ([exchange_api.Order(self, order['id'], True,
+                                        float(order['amount']) / pow(10, 8),
+                                        float(order['rate']) / pow(10, 8)) for
+                     order in orders if order['bid']],
+                    [exchange_api.Order(self, order['id'], False,
+                                        float(order['amount']) / pow(10, 8),
+                                        float(order['rate']) / pow(10, 8)) for
+                     order in orders if not order['bid']])
+        except (TypeError, KeyError, IndexError) as e:
+            raise exchange_api.ExchangeException(e)
+
+    def CreateOrder(self, amount, bid=True, price=None):
         if self._reverse_market:
             bid = not bid
         if price is None:
@@ -47,7 +64,8 @@ class Market(exchange_api.Market):
                  'rate' : max(1, int(price * pow(10, 8)))}
         post_data = json.dumps({'order' : order}).encode('utf-8')
         try:
-            return self._exchange._PrivateRequest('orders', post_data, 'order')['id']
+            order_id = self._exchange._PrivateRequest('orders', post_data, 'order')['id']
+            return exchange_api.Order(self, order_id, bid, amount, price)
         except (TypeError, KeyError, IndexError) as e:
             raise exchange_api.ExchangeException(e)
 
@@ -81,12 +99,14 @@ class CoinEx(exchange_api.Exchange):
     def _GetCurrencyName(self, currency_id):
         return self._currency_names.get(currency_id, '#%s' % currency_id)
 
-    def _Request(self, method, headers=None, post_data=None, json_root=None):
+    def _Request(self, method, request_vars=None, headers=None, post_data=None, json_root=None):
+        request_string = '?' + urllib.parse.urlencode(request_vars) if request_vars else ''
         if headers is None:
             headers = {}
         headers.update(self.api_headers.items())
         try:
-            request = urllib.request.Request(self.api_url + method, post_data, headers)
+            request = urllib.request.Request(self.api_url + method + request_string,
+                                             post_data, headers)
             response = urllib.request.urlopen(request)
             try:
                 response_json = json.loads(response.read().decode('utf-8'))
@@ -107,7 +127,7 @@ class CoinEx(exchange_api.Exchange):
         digest = hmac.new(self.api_secret, hmac_data, hashlib.sha512).hexdigest()
         headers = {'API-Key' : self.api_key,
                    'API-Sign': digest}
-        return self._Request(method, headers, post_data, json_root)
+        return self._Request(method, headers=headers, post_data=post_data, json_root=json_root)
 
     def GetCurrencies(self):
         return self._currency_names.values()

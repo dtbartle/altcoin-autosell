@@ -5,6 +5,30 @@ class ExchangeException(Exception):
         message = '[%s] %s' % (type(exception).__name__, exception)
         Exception.__init__(self, message)
 
+# An order.
+class Order(object):
+    def __init__(self, market, order_id, bid_order, amount, price):
+        self._market = market
+        self._order_id = order_id
+        self._bid_order = bid_order
+        self._amount = amount
+        self._price = price
+
+    def GetMarket(self):
+        return self._market
+
+    def GetOrderId(self):
+        return self._order_id
+
+    def IsBidOrder(self):
+        return self._bid_order
+
+    def GetAmount(self):
+        return self._amount
+
+    def GetPrice(self):
+        return self._price
+
 # An available market.
 class Market(object):
     # Returns the currency that will be sold.
@@ -19,9 +43,13 @@ class Market(object):
     def GetTradeMinimum(self):
         raise NotImplementedError
 
+    # Returns a tuple of buy and sell Orders.
+    def GetPublicOrders(self):
+        raise NotImplementedError
+
     # Creates an order (market order if price is None).
     # If 'bid' is True, this is a bid/buy order, otherwise an ask/sell order.
-    # Returns an order_id.
+    # Returns an Order.
     def CreateOrder(self, amount, bid=True, price=None):
         raise NotImplementedError
 
