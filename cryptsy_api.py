@@ -1,3 +1,4 @@
+import collections
 import exchange_api
 import hashlib
 import hmac
@@ -16,9 +17,45 @@ except ImportError:
     import urllib2
     class urllib: request = urllib2; error = urllib2; parse = urllib
 
-class Cryptsy(exchange_api.Exchange):
+class Market(exchange_api.Market):
+    _TRADE_MINIMUMS = {('Points', 'BTC') : 0.1}
 
-    name = 'Cryptsy'
+    def __init__(self, exchange, source_currency, target_currency, market_id, reverse_market):
+        self._exchange = exchange
+        self._source_currency = source_currency
+        self._target_currency = target_currency
+        self._market_id = market_id
+        self._reverse_market = reverse_market
+
+    def GetSourceCurrency(self):
+        return self._source_currency
+
+    def GetTargetCurrency(self):
+        return self._target_currency
+
+    def GetTradeMinimum(self):
+        return self._TRADE_MINIMUMS.get((self._source_currency, self._target_currency), 0.0000001)
+
+    def CreateOrder(self, amount, bid=True, price=None):
+        if self._reverse_market:
+            bid = not bid
+        if price is None:
+            if not bid:
+                raise exchange_api.ExchangeException('Market sell orders are not supported.')
+            price = 0
+        post_dict = {'marketid' : self._market_id,
+                     'ordertype' : 'Buy' if bid else 'Sell',
+                     'quantity' : amount,
+                     'price' : max(0.0000001, price)}
+        try:
+            return self._exchange._Request('createorder', post_dict)['orderid']
+        except (TypeError, KeyError) as e:
+            raise exchange_api.ExchangeException(e)
+
+class Cryptsy(exchange_api.Exchange):
+    @staticmethod
+    def GetName():
+        return 'Cryptsy'
 
     def __init__(self, api_public_key, api_private_key):
         self.api_auth_url = 'https://api.cryptsy.com/api'
@@ -28,11 +65,15 @@ class Cryptsy(exchange_api.Exchange):
         self.api_public_key = api_public_key
         self.api_private_key = api_private_key.encode('utf-8')
 
-    def _GetTradeMinimum(self, market):
-        trade_minimums = {('Points', 'BTC') : 0.1}
+        self._markets = collections.defaultdict(dict)
         try:
-            trade_pair = (market['primary_currency_code'], market['secondary_currency_code'])
-            return trade_minimums.get(trade_pair, 0.0000001)
+            for market in self._Request('getmarkets')['return']:
+                market1 = Market(self, market['primary_currency_code'],
+                                 market['secondary_currency_code'], market['marketid'], False)
+                self._markets[market1.GetSourceCurrency()][market1.GetTargetCurrency()] = market1
+                market2 = Market(self, market['secondary_currency_code'],
+                                 market['primary_currency_code'], market['marketid'], True)
+                self._markets[market2.GetSourceCurrency()][market2.GetTargetCurrency()] = market2
         except (TypeError, KeyError) as e:
             raise exchange_api.ExchangeException(e)
 
@@ -62,39 +103,14 @@ class Cryptsy(exchange_api.Exchange):
             raise exchange_api.ExchangeException(e)
 
     def GetCurrencies(self):
-        currencies = {}
-        try:
-            for market in self._Request('getmarkets')['return']:
-                currencies[market['primary_currency_code']] = market['primary_currency_code']
-                currencies[market['secondary_currency_code']] = market['secondary_currency_code']
-        except (TypeError, KeyError) as e:
-            raise exchange_api.ExchangeException(e)
-        return currencies
+        return self._markets.keys()
+
+    def GetMarkets(self):
+        return self._markets
 
     def GetBalances(self):
         try:
             return {currency: float(balance) for currency, balance in
                     self._Request('getinfo')['return']['balances_available'].items()}
         except (TypeError, KeyError, ValueError) as e:
-            raise exchange_api.ExchangeException(e)
-
-    def GetMarkets(self):
-        try:
-            return [exchange_api.Market(market['primary_currency_code'],
-                                        market['secondary_currency_code'],
-                                        market['marketid'],
-                                        self._GetTradeMinimum(market)) for
-                    market in self._Request('getmarkets')['return']]
-        except (TypeError, KeyError) as e:
-            raise exchange_api.ExchangeException(e)
-        return markets
-
-    def CreateOrder(self, market_id, amount, bid=True, price=0):
-        post_dict = {'marketid' : market_id,
-                     'ordertype' : 'Buy' if bid else 'Sell',
-                     'quantity' : amount,
-                     'price' : max(0.0000001, price)}
-        try:
-            return self._Request('createorder', post_dict)['orderid']
-        except (TypeError, KeyError) as e:
             raise exchange_api.ExchangeException(e)
