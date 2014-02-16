@@ -124,5 +124,5 @@ class Cryptsy(exchange_api.Exchange):
         try:
             return {currency: float(balance) for currency, balance in
                     self._Request('getinfo')['return']['balances_available'].items()}
-        except (TypeError, LookupError, ValueError) as e:
+        except (TypeError, LookupError, ValueError, AttributeError) as e:
             raise exchange_api.ExchangeException(e)

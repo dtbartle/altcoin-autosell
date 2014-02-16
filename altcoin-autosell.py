@@ -117,11 +117,11 @@ while True:
                 try:
                     time.sleep(request_delay)
                     order = market.CreateOrder(False, balance, sell_price)
-                    _Log('Created sell order %s of %s %s for %s at %s on %s.',
+                    _Log('Created sell order %s for %s %s at %s %s on %s.',
                          order.GetOrderId(), balance, currency, sell_price, target_currency,
                          exchange.GetName())
                 except exchange_api.ExchangeException as e:
-                    _Log('Failed to create sell order of %s %s at %s for %s on %s: %s',
+                    _Log('Failed to create sell order for %s %s at %s %s on %s: %s',
                          balance, currency, sell_price, target_currency, exchange.GetName(), e)
                 finally:
                     currency = None  # don't try other markets
