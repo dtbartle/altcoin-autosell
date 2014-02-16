@@ -14,6 +14,9 @@ import os
 import sys
 import time
 
+def _FormatFloat(number):
+    return ('%.8f' % number).rstrip('0').rstrip('.')
+
 def _Log(message, *args):
     print('%s: %s' % (time.strftime('%c'), message % args))
 
@@ -118,11 +121,12 @@ while True:
                     time.sleep(request_delay)
                     order = market.CreateOrder(False, balance, sell_price)
                     _Log('Created sell order %s for %s %s at %s %s on %s.',
-                         order.GetOrderId(), balance, currency, sell_price, target_currency,
-                         exchange.GetName())
+                         order.GetOrderId(), _FormatFloat(balance), currency,
+                         _FormatFloat(sell_price), target_currency, exchange.GetName())
                 except exchange_api.ExchangeException as e:
                     _Log('Failed to create sell order for %s %s at %s %s on %s: %s',
-                         balance, currency, sell_price, target_currency, exchange.GetName(), e)
+                         _FormatFloat(balance), currency, _FormatFloat(sell_price),
+                         target_currency, exchange.GetName(), e)
                 finally:
                     currency = None  # don't try other markets
 
