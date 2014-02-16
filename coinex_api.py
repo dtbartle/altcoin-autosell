@@ -34,7 +34,7 @@ class Market(exchange_api.Market):
         return self._target_currency
 
     def GetTradeMinimum(self):
-        return 0.0000001
+        return 0.01
 
     def GetPublicOrders(self):
         try:
