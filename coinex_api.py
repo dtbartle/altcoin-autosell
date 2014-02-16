@@ -48,7 +48,7 @@ class Market(exchange_api.Market):
                                         float(order['amount']) / pow(10, 8),
                                         float(order['rate']) / pow(10, 8)) for
                      order in orders if not order['bid']])
-        except (TypeError, KeyError, IndexError) as e:
+        except (TypeError, LookupError) as e:
             raise exchange_api.ExchangeException(e)
 
     def CreateOrder(self, bid_order, amount, price):
@@ -62,7 +62,7 @@ class Market(exchange_api.Market):
         try:
             order_id = self._exchange._PrivateRequest('orders', post_data, 'order')['id']
             return exchange_api.Order(self, order_id, bid_order, amount, price)
-        except (TypeError, KeyError, IndexError) as e:
+        except (TypeError, LookupError) as e:
             raise exchange_api.ExchangeException(e)
 
 class CoinEx(exchange_api.Exchange):
@@ -89,7 +89,7 @@ class CoinEx(exchange_api.Exchange):
                 market2 = Market(self, trade_pair['market_id'], trade_pair['currency_id'],
                                  trade_pair['id'], True)
                 self._markets[market2.GetSourceCurrency()][market2.GetTargetCurrency()] = market2
-        except (TypeError, KeyError) as e:
+        except (TypeError, LookupError) as e:
             raise exchange_api.ExchangeException(e)
 
     def _GetCurrencyName(self, currency_id):
@@ -137,6 +137,6 @@ class CoinEx(exchange_api.Exchange):
             for balance in self._PrivateRequest('balances'):
                 balances[self._GetCurrencyName(balance['currency_id'])] = (
                     float(balance['amount']) / pow(10, 8))
-        except (TypeError, KeyError) as e:
+        except (TypeError, LookupError) as e:
             raise exchange_api.ExchangeException(e)
         return balances

@@ -48,7 +48,7 @@ class Market(exchange_api.Market):
                                         float(order['quantity']),
                                         float(order['sellprice'])) for
                      order in orders.get('sellorders', [])])
-        except (TypeError, KeyError, IndexError) as e:
+        except (TypeError, LookupError) as e:
             raise exchange_api.ExchangeException(e)
 
     def CreateOrder(self, bid_order, amount, price):
@@ -61,7 +61,7 @@ class Market(exchange_api.Market):
         try:
             order_id = self._exchange._Request('createorder', post_dict)['orderid']
             return exchange_api.Order(self, order_id, bid_order, amount, price)
-        except (TypeError, KeyError) as e:
+        except (TypeError, LookupError) as e:
             raise exchange_api.ExchangeException(e)
 
 class Cryptsy(exchange_api.Exchange):
@@ -86,7 +86,7 @@ class Cryptsy(exchange_api.Exchange):
                 market2 = Market(self, market['secondary_currency_code'],
                                  market['primary_currency_code'], market['marketid'], True)
                 self._markets[market2.GetSourceCurrency()][market2.GetTargetCurrency()] = market2
-        except (TypeError, KeyError) as e:
+        except (TypeError, LookupError) as e:
             raise exchange_api.ExchangeException(e)
 
     def _Request(self, method, post_dict=None):
@@ -124,5 +124,5 @@ class Cryptsy(exchange_api.Exchange):
         try:
             return {currency: float(balance) for currency, balance in
                     self._Request('getinfo')['return']['balances_available'].items()}
-        except (TypeError, KeyError, ValueError) as e:
+        except (TypeError, LookupError, ValueError) as e:
             raise exchange_api.ExchangeException(e)
