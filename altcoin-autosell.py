@@ -31,7 +31,12 @@ def _LoadExchangeConfig(config, target_currencies, source_currencies, exchange_c
             return None
         args[key] = config.get(exchange_class.GetName(), key)
 
-    exchange = exchange_class(**args)
+    try:
+        exchange = exchange_class(**args)
+    except exchange_api.ExchangeException as e:
+        _Log('Failed to create %s instance: %s', exchange_class.GetName(), e)
+        return None
+
     currencies = set(exchange.GetCurrencies())
     if not (currencies & set(target_currencies)):
         _Log('%s does not list any target_currencies, disabling.', exchange.GetName())
