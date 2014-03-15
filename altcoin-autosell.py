@@ -116,7 +116,12 @@ while True:
                     continue
 
                 try:
-                    sell_price = max([order.GetPrice() for order in market.GetPublicOrders()[0]])
+                    orders = [order.GetPrice() for order in market.GetPublicOrders()[0]]
+                    if not orders:
+                        _Log('No buy orders for %s/%s on %s.',
+                             currency, target_currency, exchange.GetName())
+                        continue
+                    sell_price = max(orders)
                 except exchange_api.ExchangeException as e:
                     _Log('Failed to get public orders for %s/%s on %s: %s',
                          currency, target_currency, exchange.GetName(), e)
